@@ -7,6 +7,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
+import com.netflix.jmeter.sampler.AbstractSampler;
 import org.apache.cassandra.db.ColumnFamily;
 import org.apache.cassandra.db.IColumn;
 import org.apache.cassandra.db.ReadCommand;
@@ -116,6 +117,11 @@ public class FatClientOperation extends ThriftOperation
         {
             throw new OperationException(e);
         }
+    }
+
+    @Override
+    public ResponseData get(Collection<Object> rkey, Object colName) throws OperationException {
+        throw new UnsupportedOperationException();
     }
 
     @Override

@@ -1,6 +1,7 @@
 package com.netflix.jmeter.sampler;
 
 import java.nio.ByteBuffer;
+import java.util.Collection;
 import java.util.Map;
 
 import com.netflix.astyanax.serializers.AbstractSerializer;
@@ -16,6 +17,8 @@ public interface Operation
 
     ResponseData get(Object rkey, Object colName) throws OperationException;
 
+    ResponseData get(Collection<Object> rkey, Object colName) throws OperationException;
+
     ResponseData rangeSlice(Object rKey, Object startColumn, Object endColumn, boolean reversed, int count) throws OperationException;
 
     ResponseData putComposite(String key, String colName, ByteBuffer vbb) throws OperationException;
@@ -23,6 +26,8 @@ public interface Operation
     ResponseData batchCompositeMutate(String key, Map<String, ByteBuffer> nv) throws OperationException;
 
     ResponseData getComposite(String stringValue, String stringValue2) throws OperationException;
-    
+
+    ResponseData getComposite(Collection<String> stringValue, String stringValue2) throws OperationException;
+
     ResponseData delete(Object rkey, Object colName) throws OperationException;
 }

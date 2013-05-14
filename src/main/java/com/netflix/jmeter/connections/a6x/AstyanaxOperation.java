@@ -1,10 +1,14 @@
 package com.netflix.jmeter.connections.a6x;
 
 import java.nio.ByteBuffer;
+import java.util.Collection;
 import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
+import com.netflix.astyanax.model.*;
+import com.netflix.jmeter.sampler.AbstractSampler;
 import org.apache.cassandra.utils.Pair;
 
 import com.netflix.astyanax.ColumnListMutation;
@@ -14,9 +18,6 @@ import com.netflix.astyanax.SerializerPackage;
 import com.netflix.astyanax.connectionpool.OperationResult;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
 import com.netflix.astyanax.connectionpool.exceptions.NotFoundException;
-import com.netflix.astyanax.model.Column;
-import com.netflix.astyanax.model.ColumnFamily;
-import com.netflix.astyanax.model.ColumnList;
 import com.netflix.astyanax.serializers.AbstractSerializer;
 import com.netflix.astyanax.serializers.ByteBufferSerializer;
 import com.netflix.astyanax.serializers.LongSerializer;
@@ -167,6 +168,44 @@ public class AstyanaxOperation implements Operation
     }
 
     @Override
+    public ResponseData get(Collection<Object> rkey, Object colName) throws OperationException {
+        StringBuffer response = new StringBuffer();
+        int bytes = 0;
+        OperationResult<Rows<Object,Object>> opResult = null;
+        try
+        {
+            opResult = AstyanaxConnection.instance.keyspace().prepareQuery(cfs).getKeySlice(rkey).withColumnSlice(colName).execute();
+            Rows<Object, Object> result = opResult.getResult();
+            for (Object objectObjectRow : result.getKeys()) {
+                Row<Object, Object> row = result.getRow(objectObjectRow);
+                StringBuilder builder = new StringBuilder();
+                for (Column<Object> column : row.getColumns()) {
+                    bytes += column.getRawName().capacity();
+                    bytes += column.getByteBufferValue().capacity();
+                    builder.append(SystemUtils.convertToString(valueSerializer, column.getByteBufferValue()));
+                }
+//                String value = SystemUtils.convertToString(valueSerializer, opResult.getResult().getByteBufferValue());
+                String value = builder.toString();
+                response.append(value);
+
+            }
+//            bytes = opResult.getResult().getRawName().capacity();
+//            bytes += opResult.getResult().getByteBufferValue().capacity();
+        }
+        catch (NotFoundException ex)
+        {
+            // ignore this because nothing is available to show
+            response.append("...Not found...");
+        }
+        catch (ConnectionException e)
+        {
+            throw new OperationException(e);
+        }
+
+        return new AstyanaxResponseData(response.toString(), bytes, opResult, rkey, colName, null);
+    }
+
+    @Override
     public ResponseData getComposite(String key, String colName) throws OperationException
     {
         StringBuffer response = new StringBuffer();
@@ -194,6 +233,58 @@ public class AstyanaxOperation implements Operation
             throw new OperationException(e);
         }
         return new AstyanaxResponseData(response.toString(), bytes, opResult, key, colName, null);
+    }
+
+    @Override
+    public ResponseData getComposite(Collection<String> keysValues, String colName) throws OperationException {
+        StringBuffer response = new StringBuffer();
+        int bytes = 0;
+        OperationResult<Rows<ByteBuffer, ByteBuffer>> opResult = null;
+        try
+        {
+            SerializerPackage sp = AstyanaxConnection.instance.keyspace().getSerializerPackage(cfName, false);
+            ByteBuffer column = sp.columnAsByteBuffer(colName);
+            Collection<ByteBuffer> keys = new LinkedList<ByteBuffer>();
+            for (String singleKey : keysValues) {
+                ByteBuffer bbKey = sp.keyAsByteBuffer(singleKey);
+                keys.add(bbKey);
+
+            }
+
+
+            ColumnFamily<ByteBuffer, ByteBuffer> columnFamily = new ColumnFamily(cfName, ByteBufferSerializer.get(), ByteBufferSerializer.get());
+            opResult = AstyanaxConnection.instance.keyspace().prepareQuery(columnFamily).getKeySlice(keys).withColumnSlice(column).execute();
+
+            Rows<ByteBuffer, ByteBuffer> result = opResult.getResult();
+            for (ByteBuffer objectObjectRow : result.getKeys()) {
+                Row<ByteBuffer, ByteBuffer> row = result.getRow(objectObjectRow);
+                StringBuilder builder = new StringBuilder();
+                for (Column<ByteBuffer> aColumn : row.getColumns()) {
+                    bytes += aColumn.getRawName().capacity();
+                    bytes += aColumn.getByteBufferValue().capacity();
+                    builder.append(SystemUtils.convertToString(valueSerializer, aColumn.getByteBufferValue()));
+                }
+//                String value = SystemUtils.convertToString(valueSerializer, opResult.getResult().getByteBufferValue());
+                String value = builder.toString();
+                response.append(value);
+
+            }
+
+//            bytes = opResult.getResult().getByteBufferValue().capacity();
+//            bytes += opResult.getResult().getRawName().capacity();
+//            String value = SystemUtils.convertToString(valueSerializer, opResult.getResult().getByteBufferValue());
+//            response.append(value);
+        }
+        catch (NotFoundException ex)
+        {
+            // ignore this because nothing is available to show
+            response.append("...Not found...");
+        }
+        catch (Exception e)
+        {
+            throw new OperationException(e);
+        }
+        return new AstyanaxResponseData(response.toString(), bytes, opResult, keysValues, colName, null);
     }
 
     @Override

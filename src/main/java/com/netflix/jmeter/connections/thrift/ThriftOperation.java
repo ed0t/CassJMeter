@@ -1,9 +1,11 @@
 package com.netflix.jmeter.connections.thrift;
 
 import java.nio.ByteBuffer;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
+import com.netflix.jmeter.sampler.AbstractSampler;
 import org.apache.cassandra.thrift.ColumnOrSuperColumn;
 import org.apache.cassandra.thrift.ConsistencyLevel;
 import org.apache.cassandra.thrift.CounterColumn;
@@ -131,6 +133,11 @@ public class ThriftOperation implements Operation
     }
 
     @Override
+    public ResponseData get(Collection<Object> rkey, Object colName) throws OperationException {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
     public ResponseData rangeSlice(Object rKey, Object startColumn, Object endColumn, boolean reversed, int count) throws OperationException
     {
         ByteBuffer key = kser.toByteBuffer(rKey);
@@ -182,6 +189,11 @@ public class ThriftOperation implements Operation
     {
         // TODO Auto-generated method stub
         return null;
+    }
+
+    @Override
+    public ResponseData getComposite(Collection<String> stringValue, String stringValue2) throws OperationException {
+        throw new UnsupportedOperationException();
     }
 
     @Override
